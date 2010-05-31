@@ -1,13 +1,13 @@
 ;;; shell-pop.el --- Helps you pop up and pop out shell buffer easily.
-;;; $Id: shell-pop.el,v 1.2 2010/05/28 14:57:33 whitypig Exp whitypig $
+;;; $Id: shell-pop.el,v 1.3 2010/05/28 14:58:12 whitypig Exp whitypig $
 
 ;; Copyright (C) 2009 Free Software Foundation, Inc.
 
 ;; Author:        Kazuo YAGI <kyagi@1liner.jp>
 ;; Maintainer:    Kazuo YAGI <kyagi@1liner.jp>
 ;; Created:       2009-05-31
-;; Last-Updated:  $Date: 2010/05/28 14:57:33 $
-;; Revision:      $Revision: 1.2 $
+;; Last-Updated:  $Date: 2010/05/28 14:58:12 $
+;; Revision:      $Revision: 1.3 $
 ;; Keywords:      shell, terminal, tools
 ;; Compatibility: GNU Emacs 23.x
 
@@ -59,6 +59,9 @@
 ;;; Update Info;
 ;;
 ;; $Log: shell-pop.el,v $
+;; Revision 1.3  2010/05/28 14:58:12  whitypig
+;; Removed some garbage left.
+;;
 ;; Revision 1.2  2010/05/28 14:57:33  whitypig
 ;; Updated to the latest.
 ;;
@@ -97,6 +100,28 @@
     '("ansi-term" "*ansi-term*" '(lambda () (ansi-term shell-pop-internal-mode-shell)))
     '("eshell"    "*eshell*"    '(lambda () (eshell)))))
 
+(defvar shell-pop-internal-mode-buffer-list nil
+  "A queue that holds shell buffer.
+For example, this holds \"*shell*\", \"*shell<2>*\", and so on.")
+
+(defvar shell-pop-internal-mode-buffer-current-index 0
+  "An index in shell-pop-internal-mode-buffer-list.")
+
+(defadvice shell (after shell-func-after-advice () activate)
+  "Update shell-pop-internal-mode-buffer-list
+so that the newly invoked shell buffer is contained in this list."
+  (setq shell-pop-internal-mode-buffer-list (collect-same-mode-buffer 'shell-mode)))
+
+(defun collect-same-mode-buffer (major-mode-name)
+  (let ((bl (buffer-list))
+        (ret nil))
+    (dolist (b bl)
+      (save-excursion
+        (set-buffer b)
+        (when (equal major-mode major-mode-name)
+          (add-to-list 'ret b))))
+    ret))
+
 (defun shell-pop-set-window-height (number)
   (interactive "nInput the number for the percentage of \
 selected window height (10-100): ")
@@ -123,40 +148,79 @@ selected window height (10-100): ")
                                            shell-pop-internal-mode-shell)))
   (setq shell-pop-internal-mode-shell shell))
 
+(defun shell-pop-get-shell-buffer-window ()
+  "Return a window displaying shell buffer held by `shell-pop-internal-mode-buffer-list',
+or nil."
+  (let ((w nil))
+    (catch 'found
+      (dolist (b shell-pop-internal-mode-buffer-list)
+        (when (setq w (get-buffer-window b))
+          (throw 'found w))
+        nil))))
+
 (defun shell-pop ()
   (interactive)
-  (if (equal (buffer-name) shell-pop-internal-mode-buffer)
+  (if (member (get-buffer (buffer-name)) shell-pop-internal-mode-buffer-list)
       (shell-pop-out)
     (shell-pop-up)))
 
+(defun shell-pop-get-shell-buffer-index-by-window (window)
+  "Return an index of WINDOW-displaying shell buffer in shell-pop-internal-mode-buffer-list."
+  (let ((b (window-buffer window))
+        (n 0))
+    (catch 'index
+      (dolist (e shell-pop-internal-mode-buffer-list)
+        (when (equal e b)
+          (throw 'index n))
+        (setq n (1+ n)))
+      nil)))
+
 (defun shell-pop-up ()
-  (let ((w (get-buffer-window shell-pop-internal-mode-buffer)))
-    (if w
-        (select-window w)
-      (progn
-        ; save shell-pop-last-buffer and shell-pop-last-window to return
-          (setq shell-pop-last-buffer (buffer-name))
-          (setq shell-pop-last-window (selected-window))
-          (if (not (eq shell-pop-window-height 100))
-              (progn
-                (split-window (selected-window)
-                              (if (string= shell-pop-window-position "bottom")
-                                  (round (* (window-height)
-                                            (/ (- 100 shell-pop-window-height) 100.0)))
-                                (round (* (window-height) (/ shell-pop-window-height 100.0)))))
-                (if (string= shell-pop-window-position "bottom")
-                    (other-window 1))))
-          (if (not (get-buffer shell-pop-internal-mode-buffer))
-              (funcall (eval shell-pop-internal-mode-func))
-            (switch-to-buffer shell-pop-internal-mode-buffer))))))
+  (let ((w (shell-pop-get-shell-buffer-window)))
+    (setq shell-pop-internal-mode-buffer-list (collect-same-mode-buffer 'shell-mode))
+    (cond
+     (w
+      ;; if shell buffer window is on this frame and is not focused,
+      ;; then move to that window.
+      (setq shell-pop-internal-mode-buffer-current-index
+            (shell-pop-get-shell-buffer-index-by-window w))
+      (select-window w))
+     (t
+      ;; there is no shell buffer window in the current frame
+      ;; save shell-pop-last-buffer and shell-pop-last-window to return
+      (setq shell-pop-last-buffer (buffer-name))
+      (setq shell-pop-last-window (selected-window))
+      (when (not (eq shell-pop-window-height 100))
+        (split-window (selected-window)
+                      (if (string= shell-pop-window-position "bottom")
+                          (round (* (window-height)
+                                    (/ (- 100 shell-pop-window-height) 100.0)))
+                        (round (* (window-height) (/ shell-pop-window-height 100.0)))))
+        (when (string= shell-pop-window-position "bottom")
+            (other-window 1)))
+      ;; a window for shell buffer has been created
+      ;; Also I'm not in shell buffer
+      (if (null shell-pop-internal-mode-buffer-list)
+          ;; if there is no shell buffer available, create one
+          (funcall (eval shell-pop-internal-mode-func))
+        (switch-to-buffer (nth shell-pop-internal-mode-buffer-current-index
+                               shell-pop-internal-mode-buffer-list)))))))
 
 (defun shell-pop-out ()
-  (if (not (eq shell-pop-window-height 100))
-      (progn
-        (delete-window)
-        (if (string= shell-pop-window-position "bottom")
-            (select-window shell-pop-last-window))))
-  (switch-to-buffer shell-pop-last-buffer))
+  (cond ((= (1+ shell-pop-internal-mode-buffer-current-index)
+           (length shell-pop-internal-mode-buffer-list))
+         ;; move to the non-shell buffer
+         (setq shell-pop-internal-mode-buffer-current-index 0)
+         (when (not (eq shell-pop-window-height 100))
+           (delete-window)
+           (if (string= shell-pop-window-position "bottom")
+               (select-window shell-pop-last-window)))
+         (switch-to-buffer shell-pop-last-buffer))
+        (t
+         (setq shell-pop-internal-mode-buffer-current-index
+               (1+ shell-pop-internal-mode-buffer-current-index))
+         (switch-to-buffer (nth shell-pop-internal-mode-buffer-current-index
+                                shell-pop-internal-mode-buffer-list)))))
 
 (provide 'shell-pop)
 
