@@ -219,12 +219,19 @@ to choose an appropriate window."
            (delete-window)
            (if (string= shell-pop-window-position "bottom")
                (select-window shell-pop-last-window)))
-         (switch-to-buffer shell-pop-last-buffer))
+         (shell-pop-goto-previous-buffer shell-pop-last-buffer))
         (t
          (setq shell-pop-internal-mode-buffer-current-index
                (1+ shell-pop-internal-mode-buffer-current-index))
-         (switch-to-buffer (nth shell-pop-internal-mode-buffer-current-index
-                                shell-pop-internal-mode-buffer-list)))))
+         (shell-pop-go-to-previous-buffer (nth shell-pop-internal-mode-buffer-current-index
+                                                 shell-pop-internal-mode-buffer-list)))))
+
+(defun shell-pop-goto-previous-buffer (prev-buffer)
+  "Go to the PREV-BUFFER if it exists.
+If PREV-BUFFER no longer exists, we get Emacs to choose appropriate one."
+  (let ((b (get-buffer prev-buffer)))
+    (if b (switch-to-buffer b)
+      (switch-to-buffer (other-buffer)))))
 
 (provide 'shell-pop)
 
