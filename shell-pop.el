@@ -93,12 +93,12 @@
 (defvar shell-pop-internal-mode-shell "/bin/bash")
 
 (defvar shell-pop-internal-mode-list
+  ;; mode, buffer, function
   (list
-    ; mode, buffer, function
-    '("shell"     "*shell*"     '(lambda () (shell)))
-    '("terminal"  "*terminal*"  '(lambda () (term shell-pop-internal-mode-shell)))
-    '("ansi-term" "*ansi-term*" '(lambda () (ansi-term shell-pop-internal-mode-shell)))
-    '("eshell"    "*eshell*"    '(lambda () (eshell)))))
+   '("shell"     "*shell*"     '(lambda () (shell)))
+   '("terminal"  "*terminal*"  '(lambda () (term shell-pop-internal-mode-shell)))
+   '("ansi-term" "*ansi-term*" '(lambda () (ansi-term shell-pop-internal-mode-shell)))
+   '("eshell"    "*eshell*"    '(lambda () (eshell)))))
 
 (defvar shell-pop-internal-mode-buffer-list nil
   "A queue that holds shell buffer.
@@ -176,6 +176,7 @@ or nil."
       nil)))
 
 (defun shell-pop-up ()
+  "Pop up shell buffer."
   (let ((w (shell-pop-get-shell-buffer-window)))
     (setq shell-pop-internal-mode-buffer-list (collect-same-mode-buffer 'shell-mode))
     (cond
@@ -197,7 +198,7 @@ or nil."
                                     (/ (- 100 shell-pop-window-height) 100.0)))
                         (round (* (window-height) (/ shell-pop-window-height 100.0)))))
         (when (string= shell-pop-window-position "bottom")
-            (other-window 1)))
+          (other-window 1)))
       ;; a window for shell buffer has been created
       ;; Also I'm not in shell buffer
       (if (null shell-pop-internal-mode-buffer-list)
@@ -207,8 +208,11 @@ or nil."
                                shell-pop-internal-mode-buffer-list)))))))
 
 (defun shell-pop-out ()
+  "Hide shell buffer.
+If the previously acitive buffer no longer exists, we get emacs
+to choose an appropriate window."
   (cond ((= (1+ shell-pop-internal-mode-buffer-current-index)
-           (length shell-pop-internal-mode-buffer-list))
+            (length shell-pop-internal-mode-buffer-list))
          ;; move to the non-shell buffer
          (setq shell-pop-internal-mode-buffer-current-index 0)
          (when (not (eq shell-pop-window-height 100))
