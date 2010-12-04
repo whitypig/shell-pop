@@ -119,7 +119,7 @@ so that the newly invoked shell buffer is contained in this list."
       (save-excursion
         (set-buffer b)
         (when (equal major-mode major-mode-name)
-          (add-to-list 'ret b))))
+          (add-to-list 'ret b t))))
     ret))
 
 (defun shell-pop-set-window-height (number)
