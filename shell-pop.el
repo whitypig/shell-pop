@@ -112,7 +112,7 @@ For example, this holds \"*shell*\", \"*shell<2>*\", and so on.")
 so that the newly invoked shell buffer is contained in this list."
   (setq shell-pop-internal-mode-buffer-list (collect-same-mode-buffer 'shell-mode)))
 
-(defun collect-same-mode-buffer (major-mode-name)
+(defun shell-pop-collect-same-mode-buffer (major-mode-name)
   (let ((bl (buffer-list))
         (ret nil))
     (dolist (b bl)
