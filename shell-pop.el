@@ -110,7 +110,7 @@ For example, this holds \"*shell*\", \"*shell<2>*\", and so on.")
 (defadvice shell (after shell-func-after-advice () activate)
   "Update shell-pop-internal-mode-buffer-list
 so that the newly invoked shell buffer is contained in this list."
-  (setq shell-pop-internal-mode-buffer-list (collect-same-mode-buffer 'shell-mode)))
+  (setq shell-pop-internal-mode-buffer-list (shell-pop-collect-same-mode-buffer 'shell-mode)))
 
 (defun shell-pop-collect-same-mode-buffer (major-mode-name)
   (let ((bl (buffer-list))
@@ -178,7 +178,7 @@ or nil."
 (defun shell-pop-up ()
   "Pop up shell buffer."
   (let ((w (shell-pop-get-shell-buffer-window)))
-    (setq shell-pop-internal-mode-buffer-list (collect-same-mode-buffer 'shell-mode))
+    (setq shell-pop-internal-mode-buffer-list (shell-pop-collect-same-mode-buffer 'shell-mode))
     (cond
      (w
       ;; if shell buffer window is on this frame and is not focused,
