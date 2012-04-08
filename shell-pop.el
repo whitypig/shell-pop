@@ -247,7 +247,8 @@ If PREV-BUFFER no longer exists, we get Emacs to choose appropriate one."
              (setq shell-pop-last-buffer (buffer-name
                                           (find-if
                                            (lambda (b)
-                                             (not (member b shell-pop-internal-mode-buffer-list)))
+                                             (and (not (member b shell-pop-internal-mode-buffer-list))
+                                                  (not (string-match "^ " (buffer-name b)))))
                                            (buffer-list))))
            prev-buffer))
       (switch-to-buffer (other-buffer)))))
