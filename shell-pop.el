@@ -82,6 +82,9 @@
 ;;
 
 ;;; Code:
+(eval-when-compile
+  (require 'cl))
+
 (defvar shell-pop-last-buffer nil)
 (defvar shell-pop-last-window nil)
 (defvar shell-pop-window-height 30) ; percentage for shell-buffer window height
@@ -124,7 +127,8 @@ so that the newly invoked shell buffer is contained in this list."
         (set-buffer b)
         (when (memq major-mode shell-pop-internal-shell-modes)
           (add-to-list 'ret b t))))
-    ret))
+    (sort ret (lambda (b1 b2)
+                (string< (buffer-name b1) (buffer-name b2))))))
 
 (defun shell-pop-set-window-height (number)
   (interactive "nInput the number for the percentage of \
@@ -226,7 +230,8 @@ to choose an appropriate window."
          (shell-pop-goto-previous-buffer shell-pop-last-buffer))
         (t
          (setq shell-pop-internal-mode-buffer-current-index
-               (1+ shell-pop-internal-mode-buffer-current-index))
+               (mod (1+ shell-pop-internal-mode-buffer-current-index)
+                    (length shell-pop-internal-mode-buffer-list)))
          (shell-pop-goto-previous-buffer (nth shell-pop-internal-mode-buffer-current-index
                                                shell-pop-internal-mode-buffer-list)))))
 
@@ -234,7 +239,17 @@ to choose an appropriate window."
   "Go to the PREV-BUFFER if it exists.
 If PREV-BUFFER no longer exists, we get Emacs to choose appropriate one."
   (let ((b (get-buffer prev-buffer)))
-    (if b (switch-to-buffer b)
+    (if b
+        (switch-to-buffer
+         (if (member
+              (get-buffer shell-pop-last-buffer)
+              shell-pop-internal-mode-buffer-list)
+             (setq shell-pop-last-buffer (buffer-name
+                                          (find-if
+                                           (lambda (b)
+                                             (not (member b shell-pop-internal-mode-buffer-list)))
+                                           (buffer-list))))
+           prev-buffer))
       (switch-to-buffer (other-buffer)))))
 
 (provide 'shell-pop)
